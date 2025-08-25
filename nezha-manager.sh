@@ -1,7 +1,23 @@
 #!/bin/sh
+# 哪吒监控客户端管理脚本（带自我修复功能）
 
-# 哪吒监控客户端管理脚本（多系统支持版）
-# 自动识别Alpine、OpenWRT和普通Linux系统
+# 自我修复：处理Windows换行符问题
+fix_script_format() {
+    # 检测并修复换行符（将CRLF转换为LF）
+    if grep -q $'\r' "$0"; then
+        echo "检测到Windows格式换行符，正在修复..."
+        # 使用sed移除回车符
+        sed -i.bak 's/\r$//' "$0" >/dev/null 2>&1
+        # 删除备份文件
+        rm -f "$0.bak"
+        echo "格式修复完成，正在重新启动脚本..."
+        # 重新执行修复后的脚本
+        exec "$0" "$@"
+    fi
+}
+
+# 首先执行格式修复
+fix_script_format
 
 # 全局变量
 SERVICE_NAME="nezha-agent"
@@ -204,7 +220,66 @@ check_dependencies() {
     return 0
 }
 
-# 修改安装路径
+# 主逻辑
+detect_system
+init_system_config
+
+while true; do
+    show_main_menu
+    case $CHOICE in
+        1)
+            install_service
+            ;;
+        2)
+            uninstall_service
+            ;;
+        3)
+            start_service
+            ;;
+        4)
+            stop_service
+            ;;
+        5)
+            restart_service
+            ;;
+        6)
+            check_status
+            ;;
+        7)
+            enable_service
+            ;;
+        8)
+            disable_service
+            ;;
+        9)
+            modify_install_path
+            ;;
+        10)
+            edit_config
+            ;;
+        11)
+            toggle_tls
+            ;;
+        12)
+            import_from_oneclick
+            ;;
+        13)
+            fix_service
+            ;;
+        14)
+            show_title
+            echo "感谢使用，再见！"
+            exit 0
+            ;;
+        *)
+            show_title
+            echo "无效选项，请输入1-14之间的数字"
+            read -p "按回车键返回主菜单..."
+            ;;
+    esac
+done
+
+# 所有功能函数定义（确保脚本末尾没有多余空行）
 modify_install_path() {
     show_title
     echo "当前安装目录: $INSTALL_DIR"
@@ -217,7 +292,6 @@ modify_install_path() {
     read -p "按回车键返回主菜单..."
 }
 
-# 验证服务脚本是否存在
 validate_service_script() {
     if [ ! -f "$SERVICE_SCRIPT" ]; then
         echo "错误: 服务脚本不存在 - $SERVICE_SCRIPT"
@@ -227,7 +301,6 @@ validate_service_script() {
     return 0
 }
 
-# 验证配置文件是否存在
 validate_config_file() {
     if [ ! -f "$CONFIG_FILE_PATH" ]; then
         echo "错误: 配置文件不存在 - $CONFIG_FILE_PATH"
@@ -237,7 +310,6 @@ validate_config_file() {
     return 0
 }
 
-# 获取当前TLS状态
 get_tls_status() {
     if [ ! -f "$CONFIG_FILE_PATH" ]; then
         echo "false"
@@ -248,7 +320,6 @@ get_tls_status() {
     echo "${tls_status:-false}"
 }
 
-# 切换TLS状态
 toggle_tls() {
     show_title
     if ! validate_config_file; then
@@ -304,7 +375,6 @@ toggle_tls() {
     fi
 }
 
-# 通过一键命令导入配置
 import_from_oneclick() {
     show_title
     echo "通过一键命令导入配置"
@@ -411,7 +481,6 @@ EOL
     read -p "按回车键返回主菜单..."
 }
 
-# 启动服务
 start_service() {
     show_title
     if ! validate_service_script; then
@@ -458,7 +527,6 @@ start_service() {
     read -p "按回车键返回主菜单..."
 }
 
-# 停止服务
 stop_service() {
     show_title
     if ! validate_service_script; then
@@ -503,7 +571,6 @@ stop_service() {
     read -p "按回车键返回主菜单..."
 }
 
-# 重启服务
 restart_service() {
     show_title
     if ! validate_service_script; then
@@ -538,7 +605,6 @@ restart_service() {
     read -p "按回车键返回主菜单..."
 }
 
-# 查看服务状态
 check_status() {
     show_title
     if ! validate_service_script; then
@@ -567,7 +633,6 @@ check_status() {
     read -p "按回车键返回主菜单..."
 }
 
-# 启用开机自启动
 enable_service() {
     show_title
     if ! validate_service_script; then
@@ -606,7 +671,6 @@ enable_service() {
     read -p "按回车键返回主菜单..."
 }
 
-# 禁用开机自启动
 disable_service() {
     show_title
     if ! validate_service_script; then
@@ -645,7 +709,6 @@ disable_service() {
     read -p "按回车键返回主菜单..."
 }
 
-# 编辑配置文件
 edit_config() {
     show_title
     if [ ! -d "$INSTALL_DIR" ]; then
@@ -705,7 +768,6 @@ EOL
     fi
 }
 
-# 修复服务配置
 fix_service() {
     show_title
     if [ ! -d "$INSTALL_DIR" ]; then
@@ -822,7 +884,6 @@ EOL
     fi
 }
 
-# 安装客户端
 install_service() {
     show_title
     
@@ -1096,7 +1157,6 @@ EOL
     read -p "按回车键返回主菜单..."
 }
 
-# 卸载客户端
 uninstall_service() {
     show_title
     if [ ! -f "$SERVICE_SCRIPT" ] && [ ! -d "$INSTALL_DIR" ]; then
@@ -1145,62 +1205,3 @@ uninstall_service() {
     echo "卸载完成"
     read -p "按回车键返回主菜单..."
 }
-
-# 主逻辑
-detect_system
-init_system_config
-
-while true; do
-    show_main_menu
-    case $CHOICE in
-        1)
-            install_service
-            ;;
-        2)
-            uninstall_service
-            ;;
-        3)
-            start_service
-            ;;
-        4)
-            stop_service
-            ;;
-        5)
-            restart_service
-            ;;
-        6)
-            check_status
-            ;;
-        7)
-            enable_service
-            ;;
-        8)
-            disable_service
-            ;;
-        9)
-            modify_install_path
-            ;;
-        10)
-            edit_config
-            ;;
-        11)
-            toggle_tls
-            ;;
-        12)
-            import_from_oneclick
-            ;;
-        13)
-            fix_service
-            ;;
-        14)
-            show_title
-            echo "感谢使用，再见！"
-            exit 0
-            ;;
-        *)
-            show_title
-            echo "无效选项，请输入1-14之间的数字"
-            read -p "按回车键返回主菜单..."
-            ;;
-    esac
-done
